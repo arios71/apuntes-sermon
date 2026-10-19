@@ -1,4 +1,4 @@
-const CACHE_NAME = 'apuntes-sermones-offline-v2';
+const CACHE_NAME = 'apuntes-sermones-production-offline-v1';
 const CORE_FILES = [
   './plantilla_apuntes_sermon_biblioteca_en_linea.html',
   './manifest-sermones-offline.webmanifest',
@@ -24,7 +24,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter(key => key.startsWith('apuntes-sermones-offline-') && key !== CACHE_NAME).map(key => caches.delete(key)));
+    await Promise.all(keys.filter(key => key.startsWith('apuntes-sermones-production-offline-') && key !== CACHE_NAME).map(key => caches.delete(key)));
     await self.clients.claim();
   })());
 });
