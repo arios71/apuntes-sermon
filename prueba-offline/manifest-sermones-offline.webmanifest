@@ -1,0 +1,15 @@
+{
+  "id": "./plantilla_apuntes_sermon_offline.html",
+  "name": "Apuntes de sermón · Iglesia Bíblica Gracia Verdadera",
+  "short_name": "Apuntes de sermón",
+  "description": "Plantilla para tomar y guardar apuntes de sermones sin conexión y sincronizarlos cuando vuelva internet.",
+  "lang": "es",
+  "start_url": "./plantilla_apuntes_sermon_offline.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#e9e8e1",
+  "theme_color": "#253a33",
+  "icons": [
+    { "src": "./icono-sermones-offline.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
