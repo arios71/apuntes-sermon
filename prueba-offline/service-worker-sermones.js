@@ -1,4 +1,4 @@
-const CACHE_NAME = 'apuntes-sermones-offline-v1';
+const CACHE_NAME = 'apuntes-sermones-offline-v2';
 const CORE_FILES = [
   './plantilla_apuntes_sermon_offline.html',
   './manifest-sermones-offline.webmanifest',
@@ -9,6 +9,7 @@ const SUPABASE_SCRIPT = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
+    // Precarga los recursos esenciales; si falta alguno, no activa una versión incompleta.
     await cache.addAll(CORE_FILES);
     // Intenta guardar la biblioteca de Supabase para que el código local
     // siga disponible al abrir la aplicación sin conexión.
@@ -26,6 +27,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
+    // El cambio de versión crea una caché nueva y elimina la caché antigua de esta app.
     await Promise.all(keys.filter(key => key.startsWith('apuntes-sermones-offline-') && key !== CACHE_NAME).map(key => caches.delete(key)));
     await self.clients.claim();
   })());
@@ -43,14 +45,17 @@ self.addEventListener('fetch', event => {
       const cached = await cache.match(request) || await cache.match(SUPABASE_SCRIPT);
       if (cached) {
         if (self.navigator && self.navigator.onLine) {
-          fetch(request).then(response => cache.put(request, response.clone())).catch(() => {});
+          fetch(request).then(response => {
+            if (response.ok || response.type === 'opaque') cache.put(request, response.clone()).catch(() => {});
+          }).catch(() => {});
         }
         return cached;
       }
       try {
         const response = await fetch(request);
-        const cacheCopy = response.clone();
-        await cache.put(request, cacheCopy);
+        if (response.ok || response.type === 'opaque') {
+          cache.put(request, response.clone()).catch(() => {});
+        }
         return response;
       } catch (_) {
         return new Response('Supabase no está disponible sin conexión.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
