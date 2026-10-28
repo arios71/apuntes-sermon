@@ -22,11 +22,11 @@ button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,in
 <header class="topbar no-print"><div class="top-inner"><div class="brand">Reflexiones, apuntes, oraciones<small>Iglesia Bíblica Gracia Verdadera</small></div><div class="actions"><button class="btn primary" id="newBtn">＋ Nuevo</button><button class="btn" id="saveBtn">Guardar ahora</button><button class="btn" id="libraryBtn">Biblioteca</button><button class="btn gold" id="cloudBtn">Biblioteca en línea</button><button class="btn" id="shareBtn">Compartir</button><button class="btn" id="wordBtn">Word</button><button class="btn" id="pdfBtn">PDF / Imprimir</button><button class="btn gold" id="htmlBtn">Guardar HTML</button><span class="status" id="saveStatus">Guardado local</span></div></div></header>
 <main class="workspace"><article class="paper" id="paper">
 <p class="kicker">Tema</p>
-<textarea class="title-input" id="sermonTitle" data-field="title" aria-label="Título del sermón" placeholder="Título del sermón" rows="1" wrap="soft">Apuntes del sermón</textarea>
+<textarea class="title-input" id="sermonTitle" data-field="title" aria-label="Título del mensaje" placeholder="Título del mensaje" rows="1" wrap="soft">Apuntes del sermón</textarea>
 <div class="meta-grid">
  <div class="field"><label for="sermonDate">Fecha</label><input id="sermonDate" data-field="date" type="date"></div>
  <div class="field"><label for="speaker">Autor o predicador</label><input id="speaker" data-field="speaker" placeholder="Nombre"></div>
- <div class="field"><label for="series">Serie / ocasión</label><input id="series" data-field="series" placeholder="Serie, culto u ocasión"></div>
+ <div class="field"><label for="series">Serie / ocasión</label><input id="series" data-field="series" placeholder="Título"></div>
  <div class="field"><label for="passage">Pasaje bíblico principal</label><div class="passage-line"><input id="passage" data-field="passage" placeholder="Ej. Juan 3:16-18"><button class="tiny-btn" id="consultBtn" type="button">Consultar ↗</button></div></div>
 </div>
 <div class="rule"></div>
@@ -65,7 +65,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,in
   // No reemplazar las notas actuales si el guardado falla o si el usuario cancela.
   const saved=saveLocal(false);
   if(!saved){$('saveStatus').textContent='No se pudo guardar · notas conservadas';alert('No pude guardar los apuntes actuales. No abriré un sermón nuevo para evitar que pierdas el texto. Descarga primero una copia con Word o Guardar HTML.');return;}
-  if(!confirm('Los apuntes actuales se guardarán en la biblioteca local. ¿Quieres comenzar un sermón nuevo?'))return;
+  if(!confirm('Los apuntes actuales se guardarán en la biblioteca local. ¿Quieres comenzar un  nuevo?'))return;
   writeData({id:makeId(),title:'',date:todayLocal(),speaker:'',series:'',passage:'',content:'<p></p>'});$('sermonTitle').focus();scheduleSave();
  }
  function openModal(id){$(id).classList.add('open')};function closeModal(id){$(id).classList.remove('open')}
