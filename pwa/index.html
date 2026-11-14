@@ -180,9 +180,10 @@ button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,in
     const ok=await pushCloudItem(l);if(!ok)throw new Error('No se pudo subir un apunte local.');
     merged.set(id,{...l,syncBaseUpdatedAt:l.updatedAt});
    }
-   const pendingAtEnd=new Set(getTombstones().map(x=>String(x.id)));const all=[...merged.values()].filter(x=>!pendingAtEnd.has(String(x.id))).sort((a,b)=>Date.parse(b.updatedAt||0)-Date.parse(a.updatedAt||0));
+   const pendingAtEnd=new Set(getTombstones().map(x=>String(x.id)));let changedDuringSync=false;const latestLocal=getLibrary();for(const latest of latestLocal){const id=String(latest.id);if(pendingAtEnd.has(id))continue;const snapshot=localById.get(id);if(!snapshot||snapshot.updatedAt!==latest.updatedAt){const existing=merged.get(id);merged.set(id,{...latest,syncBaseUpdatedAt:snapshot?.syncBaseUpdatedAt||latest.syncBaseUpdatedAt||existing?.syncBaseUpdatedAt||null});changedDuringSync=true;}}
+   const all=[...merged.values()].filter(x=>!pendingAtEnd.has(String(x.id))).sort((a,b)=>Date.parse(b.updatedAt||0)-Date.parse(a.updatedAt||0));
    if(!setLibrary(all))throw new Error('No se pudo guardar localmente la biblioteca sincronizada.');
-   if(pendingAtEnd.size)setTimeout(()=>syncCloud(false),750);
+   if(pendingAtEnd.size||changedDuringSync)setTimeout(()=>syncCloud(false),750);
    const current=all.find(x=>String(x.id)===String(currentId));
    if(current)try{localStorage.setItem(CURRENT_KEY,JSON.stringify(current))}catch(_){}
    setCloudStatus(conflictCount?`Sincronización completada · ${conflictCount} conflicto(s) conservados como copias locales.`:`Sincronización completada · ${all.length} apunte(s) disponibles en línea.`);
