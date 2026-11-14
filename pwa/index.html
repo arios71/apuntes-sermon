@@ -146,7 +146,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,in
      const {error:deleteError}=await cloudClient.from('sermon_notes').update({deleted_at:tombstone.deletedAt,updated_at:tombstone.deletedAt}).eq('id',id).eq('user_id',cloudUser.id);
      if(deleteError){remaining.push(tombstone);throw deleteError;}
      remoteById.set(id,{...remoteItem,deletedAt:tombstone.deletedAt,updatedAt:tombstone.deletedAt});
-    }else if(tombstone.item&&tombstone.item.syncBaseUpdatedAt){
+    }else if(tombstone.item){
      const deleted={...tombstone.item,deletedAt:tombstone.deletedAt,updatedAt:tombstone.deletedAt};
      const ok=await pushCloudItem(deleted);
      if(!ok){remaining.push(tombstone);throw new Error('No se pudo sincronizar una eliminación pendiente.');}
