@@ -163,7 +163,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,in
     const localChanged=!!base&&l.updatedAt!==base;
     const remoteChanged=!!base&&r.updatedAt!==base;
     const contentDiff=l.title!==r.title||l.date!==r.date||l.speaker!==r.speaker||l.series!==r.series||l.passage!==r.passage||l.content!==r.content;
-    if(localChanged&&remoteChanged&&contentDiff){conflictCount++;
+    if(contentDiff&&(!base||(localChanged&&remoteChanged))){conflictCount++;
      const copy={...l,id:makeId(),title:(l.title||'Apuntes')+' (copia local)',updatedAt:new Date().toISOString(),syncBaseUpdatedAt:null,conflictCopy:true};
      const ok=await pushCloudItem(copy);if(!ok)throw new Error('No se pudo conservar una copia de los cambios locales en conflicto.');
      copy.syncBaseUpdatedAt=copy.updatedAt;
