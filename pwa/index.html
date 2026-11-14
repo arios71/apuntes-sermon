@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#253a33">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cuaderno de notas">
 <link rel="manifest" href="./manifest.webmanifest">
 <title>Cuaderno de notas · Artículos · Apuntes · Reflexiones</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -66,13 +68,13 @@ button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,in
  function saveLocal(show=true){const data=readData();data.id=currentId||makeId();currentId=data.id;const list=getLibrary();const previous=list.find(x=>String(x.id)===String(currentId));if(previous&&previous.syncBaseUpdatedAt)data.syncBaseUpdatedAt=previous.syncBaseUpdatedAt;const idx=list.findIndex(x=>x.id===currentId);if(idx>=0)list[idx]=data;else list.unshift(data);const listSaved=setLibrary(list);let currentSaved=false;try{localStorage.setItem(CURRENT_KEY,JSON.stringify(data));currentSaved=true}catch(e){storageAvailable=false}if(show){$('saveStatus').textContent=(listSaved&&currentSaved)?(cloudUser?'Guardado local · sincronizando…':'Guardado local · '+new Date().toLocaleTimeString('es-PR',{hour:'2-digit',minute:'2-digit'})):'No se pudo guardar · descarga una copia';}if(cloudUser){clearTimeout(cloudSaveTimer);cloudSaveTimer=setTimeout(()=>pushAndMarkSynced(data),1400);}return listSaved&&currentSaved;}
  function scheduleSave(){ $('saveStatus').textContent='Guardando…';clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveLocal(),350);updateCount();updateFooter(); }
  function updateCount(){const text=editor.innerText.trim();const n=text?text.split(/\s+/).length:0;$('wordCount').textContent=`${n} ${n===1?'palabra':'palabras'}`}
- function updateFooter(){$('footerDate').textContent=$('noteDate').value?new Date($('sermonDate').value+'T12:00:00').toLocaleDateString('es-PR',{year:'numeric',month:'long',day:'numeric'}):''}
+ function updateFooter(){$('footerDate').textContent=$('noteDate').value?new Date($('noteDate').value+'T12:00:00').toLocaleDateString('es-PR',{year:'numeric',month:'long',day:'numeric'}):''}
  function newNote(){
   // No reemplazar las notas actuales si el guardado falla o si el usuario cancela.
   const saved=saveLocal(false);
   if(!saved){$('saveStatus').textContent='No se pudo guardar · notas conservadas';alert('No pude guardar los apuntes actuales. No abriré un apunte nuevo para evitar que pierdas el texto. Descarga primero una copia con Word o Guardar HTML.');return;}
   if(!confirm('Los apuntes actuales se guardarán en la biblioteca local. ¿Quieres comenzar un  nuevo?'))return;
-  writeData({id:makeId(),title:'',date:todayLocal(),speaker:'',series:'',passage:'',content:'<p></p>'});$('sermonTitle').focus();scheduleSave();
+  writeData({id:makeId(),title:'',date:todayLocal(),speaker:'',series:'',passage:'',content:'<p></p>'});$('noteTitle').focus();scheduleSave();
  }
  function openModal(id){$(id).classList.add('open')};function closeModal(id){$(id).classList.remove('open')}
  function showLibrary(){
@@ -185,7 +187,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,in
  $('cloudBtn').addEventListener('click',()=>{updateCloudPanel();openModal('cloudModal')});$('cloudLoginBtn').addEventListener('click',loginCloud);$('cloudSyncBtn').addEventListener('click',()=>syncCloud(true));$('cloudLogoutBtn').addEventListener('click',logoutCloud);$('exportBackupBtn').addEventListener('click',exportLocalBackup);$('importBackupBtn').addEventListener('click',()=>$('backupFile').click());$('backupFile').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)importLocalBackup(f);e.target.value='';});
  function buildDocument(){const d=readData();const title=safe(d.title||'Apuntes');const meta=[['Fecha',d.date],['Autor',d.speaker],['Serie / ocasión',d.series],['Pasaje bíblico',d.passage]].filter(x=>x[1]).map(x=>`<p style="margin:4px 0;font-size:10pt;color:#4b574e"><b>${x[0]}:</b> ${safe(x[1])}</p>`).join('');return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Georgia,'Times New Roman',serif;font-size:11pt;line-height:1.55;color:#222;margin:.65in}h1{font-size:25pt;color:#253a33;font-weight:bold;border-bottom:1px solid #d9cfbb;padding-bottom:12pt}h2{font-size:9pt;letter-spacing:2px;color:#ad8749;text-transform:uppercase}p{margin:0 0 9pt;text-indent:1.5em}p:first-child{text-indent:0}a{color:#28644e}</style></head><body><h2>Tema</h2><h1>${title}</h1>${meta}<hr style="border:0;border-top:1px solid #ad8749;margin:20px 0">${d.content||''}</body></html>`}
  function download(filename,blob){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500)}
- function fileBase(){return ($('sermonTitle').value.trim()||'apuntes').replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,'-').slice(0,70)}
+ function fileBase(){return ($('noteTitle').value.trim()||'apuntes').replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,'-').slice(0,70)}
  function exportWord(){saveLocal(false);download(fileBase()+'.doc',new Blob(['\ufeff',buildDocument()],{type:'application/msword;charset=utf-8'}));showStorageWarning()}
  function exportHTML(){saveLocal(false);download(fileBase()+'.html',new Blob([buildDocument()],{type:'text/html;charset=utf-8'}));showStorageWarning()}
  function share(){saveLocal(false);const d=readData();const text=[d.title||'Apuntes',d.date?'Fecha: '+d.date:'',d.speaker?'Autor: '+d.speaker:'',d.passage?'Pasaje: '+d.passage:'',editor.innerText.trim()].filter(Boolean).join('\n\n');if(navigator.share){navigator.share({title:d.title||'Apuntes',text}).catch(()=>{})}else{const wa='https://wa.me/?text='+encodeURIComponent(text);if(confirm('Tu navegador no ofrece el menú de compartir. ¿Quieres compartir por WhatsApp?'))window.open(wa,'_blank','noopener,noreferrer');else if(navigator.clipboard)navigator.clipboard.writeText(text).then(()=>alert('Texto copiado. Ya puedes pegarlo en la aplicación que prefieras.'));}}
@@ -295,7 +297,7 @@ editor.addEventListener('keydown',e=>{
  window.addEventListener('beforeunload',()=>{if(saveTimer)clearTimeout(saveTimer);try{const d=readData();const hasNotes=!!(d.title.trim()&&d.title.trim()!=='Apuntes')||!!d.speaker.trim()||!!d.series.trim()||!!d.passage.trim()||!!editor.innerText.trim();if(hasNotes)saveLocal(false)}catch(_){}});
  window.addEventListener('error',e=>{const status=$('saveStatus');if(status)status.textContent='Error de la plantilla · descarga una copia';});
  document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.close)));document.querySelectorAll('.modal-backdrop').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('open')}));document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-backdrop.open').forEach(x=>x.classList.remove('open'))});
- function init(){let current=null;try{current=JSON.parse(localStorage.getItem(CURRENT_KEY)||'null')}catch(e){storageAvailable=false}if(current){writeData(current)}else{currentId=makeId();$('sermonDate').value=todayLocal();editor.innerHTML='<p></p>';updateCount();updateFooter();saveLocal(false)}if(!$('sermonDate').value)$('sermonDate').value=todayLocal();resizeTitle();updateFooter();if(!storageAvailable)$('saveStatus').textContent='Guardado local no disponible · descarga una copia';else $('saveStatus').textContent='Guardado automático activo'}
+ function init(){let current=null;try{current=JSON.parse(localStorage.getItem(CURRENT_KEY)||'null')}catch(e){storageAvailable=false}if(current){writeData(current)}else{currentId=makeId();$('noteDate').value=todayLocal();editor.innerHTML='<p></p>';updateCount();updateFooter();saveLocal(false)}if(!$('noteDate').value)$('noteDate').value=todayLocal();resizeTitle();updateFooter();if(!storageAvailable)$('saveStatus').textContent='Guardado local no disponible · descarga una copia';else $('saveStatus').textContent='Guardado automático activo'}
  if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(e=>console.error('No se pudo activar el modo sin conexión:',e)));}
  try{init()}catch(e){$('saveStatus').textContent='Error al iniciar · puedes exportar una copia';console.error('Error al iniciar la plantilla:',e)}
 })();
