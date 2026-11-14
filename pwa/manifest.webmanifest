@@ -1,0 +1,15 @@
+{
+  "id": "./index.html",
+  "name": "Cuaderno de notas",
+  "short_name": "Cuaderno",
+  "description": "Artículos, apuntes y reflexiones. Guarda y consulta tus notas con o sin conexión.",
+  "lang": "es",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#e9e8e1",
+  "theme_color": "#253a33",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
