@@ -96,7 +96,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,in
 
     if(currentId===id){
       // If deleting the open draft, clear it as well so autosave cannot silently recreate it.
-      clearTimeout(saveTimer);currentId=null;
+      clearTimeout(saveTimer);clearTimeout(cloudSaveTimer);currentId=null;
       try{localStorage.removeItem(CURRENT_KEY)}catch(e){storageAvailable=false}
       writeData({id:null,title:'',date:todayLocal(),speaker:'',series:'',passage:'',content:'<p></p>'});currentId=null;
       $('saveStatus').textContent='Borrador eliminado';
@@ -111,7 +111,24 @@ button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,in
 
  function cloudRow(d){return {id:String(d.id),user_id:cloudUser.id,title:d.title||'',sermon_date:d.date||null,speaker:d.speaker||'',series:d.series||'',passage:d.passage||'',content_html:d.content||'<p></p>',updated_at:d.updatedAt||new Date().toISOString(),deleted_at:d.deletedAt||null};}
  function localFromCloud(r){return {id:r.id,title:r.title||'',date:r.sermon_date||'',speaker:r.speaker||'',series:r.series||'',passage:r.passage||'',content:r.content_html||'<p></p>',updatedAt:r.updated_at||new Date().toISOString(),syncBaseUpdatedAt:r.updated_at||new Date().toISOString(),deletedAt:r.deleted_at||null};}
- async function pushCloudItem(d){if(!cloudClient||!cloudUser||!d||!d.id){if(!cloudClient)setCloudStatus('La conexión de biblioteca en línea no cargó. Las funciones locales siguen disponibles.');return false;}const {error}=await cloudClient.from('sermon_notes').upsert(cloudRow(d),{onConflict:'user_id,id'});if(error){setCloudStatus('No se pudo sincronizar. Revisa la conexión y la configuración de la tabla. '+error.message);$('saveStatus').textContent='Guardado local · sincronización pendiente';return false;}return true;}
+ async function pushCloudItem(d){
+  if(!cloudClient||!cloudUser||!d||!d.id){if(!cloudClient)setCloudStatus('La conexión de biblioteca en línea no cargó. Las funciones locales siguen disponibles.');return false;}
+  const pendingBefore=getTombstones().find(x=>String(x.id)===String(d.id));
+  if(pendingBefore&&!d.deletedAt){
+   const {error}=await cloudClient.from('sermon_notes').update({deleted_at:pendingBefore.deletedAt,updated_at:pendingBefore.deletedAt}).eq('id',String(d.id)).eq('user_id',cloudUser.id);
+   if(error){setCloudStatus('No se pudo sincronizar una eliminación pendiente. '+error.message);return false;}
+   return false;
+  }
+  const {error}=await cloudClient.from('sermon_notes').upsert(cloudRow(d),{onConflict:'user_id,id'});
+  if(error){setCloudStatus('No se pudo sincronizar. Revisa la conexión y la configuración de la tabla. '+error.message);$('saveStatus').textContent='Guardado local · sincronización pendiente';return false;}
+  const pendingAfter=getTombstones().find(x=>String(x.id)===String(d.id));
+  if(pendingAfter&&!d.deletedAt){
+   const {error:deleteError}=await cloudClient.from('sermon_notes').update({deleted_at:pendingAfter.deletedAt,updated_at:pendingAfter.deletedAt}).eq('id',String(d.id)).eq('user_id',cloudUser.id);
+   if(deleteError){setCloudStatus('La eliminación quedó pendiente de sincronizar. '+deleteError.message);return false;}
+   return false;
+  }
+  return true;
+ }
  async function pushAndMarkSynced(d){const ok=await pushCloudItem(d);if(!ok)return false;const list=getLibrary();const i=list.findIndex(x=>String(x.id)===String(d.id));if(i>=0&&list[i].updatedAt===d.updatedAt){list[i].syncBaseUpdatedAt=d.updatedAt;setLibrary(list);}setCloudStatus('Biblioteca sincronizada · '+new Date().toLocaleTimeString('es-PR',{hour:'2-digit',minute:'2-digit'}));$('saveStatus').textContent='Guardado en línea';return true;}
  async function syncCloud(showMessage=true){
   if(!cloudClient){setCloudStatus('No se cargó el servicio de biblioteca en línea. Prueba recargar la página.');return false;}
@@ -136,7 +153,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,in
      remoteById.set(id,deleted);
     }
    }
-   setTombstones(remaining);
+   const processedIds=new Set(pending.map(x=>String(x.id)));const newerQueue=getTombstones().filter(x=>!processedIds.has(String(x.id)));if(!setTombstones([...remaining,...newerQueue]))throw new Error('No se pudo actualizar la cola de eliminaciones pendientes.');
    const local=getLibrary(),localById=new Map(local.map(x=>[String(x.id),x])),merged=new Map();let conflictCount=0;
    for(const [id,r] of remoteById){
     if(r.deletedAt)continue;
@@ -163,8 +180,9 @@ button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,in
     const ok=await pushCloudItem(l);if(!ok)throw new Error('No se pudo subir un apunte local.');
     merged.set(id,{...l,syncBaseUpdatedAt:l.updatedAt});
    }
-   const all=[...merged.values()].sort((a,b)=>Date.parse(b.updatedAt||0)-Date.parse(a.updatedAt||0));
+   const pendingAtEnd=new Set(getTombstones().map(x=>String(x.id)));const all=[...merged.values()].filter(x=>!pendingAtEnd.has(String(x.id))).sort((a,b)=>Date.parse(b.updatedAt||0)-Date.parse(a.updatedAt||0));
    if(!setLibrary(all))throw new Error('No se pudo guardar localmente la biblioteca sincronizada.');
+   if(pendingAtEnd.size)setTimeout(()=>syncCloud(false),750);
    const current=all.find(x=>String(x.id)===String(currentId));
    if(current)try{localStorage.setItem(CURRENT_KEY,JSON.stringify(current))}catch(_){}
    setCloudStatus(conflictCount?`Sincronización completada · ${conflictCount} conflicto(s) conservados como copias locales.`:`Sincronización completada · ${all.length} apunte(s) disponibles en línea.`);
