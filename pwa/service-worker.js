@@ -1,5 +1,5 @@
-const CACHE_NAME = 'cuaderno-de-notas-shell-v1';
-const CORE_FILES = ['./index.html','./manifest.webmanifest','./icon.svg'];
+const CACHE_NAME = 'cuaderno-de-notas-shell-v2';
+const CORE_FILES = ['./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./icon-maskable-512.png'];
 const SUPABASE_SCRIPT = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
 
 self.addEventListener('install', event => {
