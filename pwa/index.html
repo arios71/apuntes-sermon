@@ -156,8 +156,8 @@ button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,in
    const processedIds=new Set(pending.map(x=>String(x.id)));const newerQueue=getTombstones().filter(x=>!processedIds.has(String(x.id)));if(!setTombstones([...remaining,...newerQueue]))throw new Error('No se pudo actualizar la cola de eliminaciones pendientes.');
    const local=getLibrary(),localById=new Map(local.map(x=>[String(x.id),x])),merged=new Map();let conflictCount=0;
    for(const [id,r] of remoteById){
-    if(r.deletedAt)continue;
     const l=localById.get(id);
+    if(r.deletedAt){if(l&&Date.parse(l.updatedAt||0)>Date.parse(r.deletedAt||r.updatedAt||0)){const copy={...l,id:makeId(),title:(l.title||'Apuntes')+' (copia local recuperada)',updatedAt:new Date().toISOString(),syncBaseUpdatedAt:null,conflictCopy:true};const ok=await pushCloudItem(copy);if(!ok)throw new Error('No se pudo conservar una versión local de un apunte eliminado en otro dispositivo.');copy.syncBaseUpdatedAt=copy.updatedAt;merged.set(String(copy.id),copy);conflictCount++;}continue;}
     if(!l){merged.set(id,{...r,syncBaseUpdatedAt:r.updatedAt});continue;}
     const base=l.syncBaseUpdatedAt||null;
     const localChanged=!!base&&l.updatedAt!==base;
@@ -180,7 +180,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,in
     const ok=await pushCloudItem(l);if(!ok)throw new Error('No se pudo subir un apunte local.');
     merged.set(id,{...l,syncBaseUpdatedAt:l.updatedAt});
    }
-   const pendingAtEnd=new Set(getTombstones().map(x=>String(x.id)));let changedDuringSync=false;const latestLocal=getLibrary();for(const latest of latestLocal){const id=String(latest.id);if(pendingAtEnd.has(id))continue;const snapshot=localById.get(id);if(!snapshot||snapshot.updatedAt!==latest.updatedAt){const existing=merged.get(id);merged.set(id,{...latest,syncBaseUpdatedAt:snapshot?.syncBaseUpdatedAt||latest.syncBaseUpdatedAt||existing?.syncBaseUpdatedAt||null});changedDuringSync=true;}}
+   const pendingAtEnd=new Set(getTombstones().map(x=>String(x.id)));let changedDuringSync=false;const latestLocal=getLibrary();for(const latest of latestLocal){const id=String(latest.id);if(pendingAtEnd.has(id))continue;const snapshot=localById.get(id);const remoteVersion=remoteById.get(id);if(remoteVersion?.deletedAt){if(snapshot&&snapshot.updatedAt!==latest.updatedAt){const copy={...latest,id:makeId(),title:(latest.title||'Apuntes')+' (copia local recuperada)',updatedAt:new Date().toISOString(),syncBaseUpdatedAt:null,conflictCopy:true};merged.set(String(copy.id),copy);conflictCount++;changedDuringSync=true;}continue;}if(!snapshot||snapshot.updatedAt!==latest.updatedAt){const existing=merged.get(id);merged.set(id,{...latest,syncBaseUpdatedAt:snapshot?.syncBaseUpdatedAt||latest.syncBaseUpdatedAt||existing?.syncBaseUpdatedAt||null});changedDuringSync=true;}}
    const all=[...merged.values()].filter(x=>!pendingAtEnd.has(String(x.id))).sort((a,b)=>Date.parse(b.updatedAt||0)-Date.parse(a.updatedAt||0));
    if(!setLibrary(all))throw new Error('No se pudo guardar localmente la biblioteca sincronizada.');
    if(pendingAtEnd.size||changedDuringSync)setTimeout(()=>syncCloud(false),750);
