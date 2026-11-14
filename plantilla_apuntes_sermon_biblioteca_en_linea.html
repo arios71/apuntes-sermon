@@ -133,7 +133,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,in
     }
    }
    setTombstones(remaining);
-   const local=getLibrary(),localById=new Map(local.map(x=>[String(x.id),x])),merged=new Map();
+   const local=getLibrary(),localById=new Map(local.map(x=>[String(x.id),x])),merged=new Map();let conflictCount=0;
    for(const [id,r] of remoteById){
     if(r.deletedAt)continue;
     const l=localById.get(id);
@@ -141,7 +141,8 @@ button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,in
     const base=l.syncBaseUpdatedAt||null;
     const localChanged=!!base&&l.updatedAt!==base;
     const remoteChanged=!!base&&r.updatedAt!==base;
-    if(localChanged&&remoteChanged&&l.updatedAt!==r.updatedAt&&!l.conflictCopy){
+    const contentDiff=l.title!==r.title||l.date!==r.date||l.speaker!==r.speaker||l.series!==r.series||l.passage!==r.passage||l.content!==r.content;
+    if(localChanged&&remoteChanged&&(l.updatedAt!==r.updatedAt||contentDiff)&&!l.conflictCopy){conflictCount++;
      const copy={...l,id:makeId(),title:(l.title||'Apuntes')+' (copia local)',updatedAt:new Date().toISOString(),syncBaseUpdatedAt:null,conflictCopy:true};
      const ok=await pushCloudItem(copy);if(!ok)throw new Error('No se pudo conservar una copia de los cambios locales en conflicto.');
      copy.syncBaseUpdatedAt=copy.updatedAt;
@@ -162,8 +163,8 @@ button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,in
    if(!setLibrary(all))throw new Error('No se pudo guardar localmente la biblioteca sincronizada.');
    const current=all.find(x=>String(x.id)===String(currentId));
    if(current)try{localStorage.setItem(CURRENT_KEY,JSON.stringify(current))}catch(_){}
-   setCloudStatus(`Sincronización completada · ${all.length} apunte(s) disponibles en línea.`);
-   if(showMessage)alert(`Biblioteca sincronizada. Hay ${all.length} apunte(s) disponibles en línea.`);
+   setCloudStatus(conflictCount?`Sincronización completada · ${conflictCount} conflicto(s) conservados como copias locales.`:`Sincronización completada · ${all.length} apunte(s) disponibles en línea.`);
+   if(showMessage)alert(conflictCount?`Biblioteca sincronizada. Se detectaron ${conflictCount} edición(es) simultánea(s); conservé las versiones locales en copias separadas.`:`Biblioteca sincronizada. Hay ${all.length} apunte(s) disponibles en línea.`);
    return true;
   }catch(e){
    setCloudStatus('No se pudo sincronizar. Los cambios locales y las eliminaciones pendientes se conservaron. '+(e.message||''));
